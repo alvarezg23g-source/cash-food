@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cash Food - Preórdenes para Quioscos</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="hero" id="site-header">
+    <div class="hero-inner">
+      <a class="brand-link" href="#auth-panel" aria-label="Cash Food, inicio">
+        <img src="assets/images/cash-food-logo.png" alt="Cash Food" class="logo" />
+      </a>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <a href="#auth-panel">Inicio</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#acerca">Acerca de nosotros</a>
+        <a class="nav-login" href="#auth-panel" data-open-auth="login">Iniciar sesión</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel auth-panel" id="auth-panel">
+      <div class="auth-story fade-in">
+        <span class="story-kicker">Hecho para el ritmo del campus</span>
+        <h2>Menos espera.<br /><em>Más recreo.</em></h2>
+        <p>Explora los quioscos, arma tu pedido y pasa a retirarlo cuando esté listo.</p>
+        <div class="story-route" aria-label="Cómo funciona">
+          <span><b>01</b> Elige</span><i></i>
+          <span><b>02</b> Pide</span><i></i>
+          <span><b>03</b> Retira</span>
+        </div>
+        <div class="story-note">
+          <span class="pulse-dot"></span>
+          <span><strong>Quioscos activos</strong> preparados para recibir pedidos</span>
+        </div>
+      </div>
+
+      <div class="auth-card fade-in delay-1">
+        <div class="auth-tabs" role="tablist" aria-label="Acceso a Cash Food">
+          <button class="auth-tab active" type="button" data-auth-view="login" role="tab" aria-selected="true">Ingresar</button>
+          <button class="auth-tab" type="button" data-auth-view="register" role="tab" aria-selected="false">Crear cuenta</button>
+        </div>
+
+        <div class="auth-view active" id="login-view">
+          <div class="auth-heading">
+            <span>Qué bueno verte</span>
+            <h2>Volvé a tu menú</h2>
+            <p>Ingresá según el tipo de cuenta que usás.</p>
+          </div>
+          <form id="login-form">
+            <label class="field">
+              <span>Correo electrónico</span>
+              <input type="email" id="login-email" placeholder="nombre@correo.com" autocomplete="email" required />
+            </label>
+            <label class="field">
+              <span>Contraseña</span>
+              <span class="password-field">
+                <input type="password" id="login-password" placeholder="Tu contraseña" autocomplete="current-password" required />
+                <button class="password-toggle" type="button" data-password-target="login-password" aria-label="Mostrar contraseña">Ver</button>
+              </span>
+            </label>
+            <button class="primary-action" type="submit"><span>Entrar a Cash Food</span><b>→</b></button>
+          </form>
+        </div>
+
+        <div class="auth-view" id="register-view" hidden>
+          <div class="auth-heading">
+            <span>Empecemos</span>
+            <h2>Creá tu cuenta</h2>
+            <p>Elegí cómo vas a usar Cash Food.</p>
+          </div>
+          <div class="role-choice">
+            <label class="role-card role-user selected">
+              <input type="radio" name="register-role" value="cliente" checked />
+              <span class="role-icon" aria-hidden="true">C</span>
+              <span><strong>Cliente</strong><small>Comprar productos</small></span>
+              <span class="role-check">✓</span>
+            </label>
+            <label class="role-card role-admin">
+              <input type="radio" name="register-role" value="admin" />
+              <span class="role-icon" aria-hidden="true">A</span>
+              <span><strong>Administrador</strong><small>Crear mi negocio</small></span>
+              <span class="role-check">✓</span>
+            </label>
+          </div>
+          <form id="register-form">
+            <label class="field">
+              <span>Nombre completo</span>
+              <input type="text" id="register-name" placeholder="Cómo querés que te llamemos" autocomplete="name" required />
+            </label>
+            <label class="field">
+              <span>Correo electrónico</span>
+              <input type="email" id="register-email" placeholder="nombre@correo.com" autocomplete="email" required />
+            </label>
+            <label class="field">
+              <span>Contraseña</span>
+              <span class="password-field">
+                <input type="password" id="register-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" minlength="6" required />
+                <button class="password-toggle" type="button" data-password-target="register-password" aria-label="Mostrar contraseña">Ver</button>
+              </span>
+            </label>
+            <p class="admin-register-note" hidden>Al crear una cuenta de administrador se generará un perfil de negocio privado ligado a este correo.</p>
+            <button class="primary-action" type="submit"><span>Crear mi cuenta</span><b>→</b></button>
+          </form>
+        </div>
+        <div class="form-message" id="auth-message" role="status" aria-live="polite" hidden></div>
+      </div>
+    </section>
+
+    <section class="info-section landing-only" id="como-funciona">
+      <div class="section-heading">
+        <span>Simple y rápido</span>
+        <h2>Tu pedido en tres pasos</h2>
+        <p>Usá tu tiempo para descansar, no para esperar en una fila.</p>
+      </div>
+      <div class="steps-grid">
+        <article class="step-card"><b>01</b><h3>Elegí tu quiosco</h3><p>Revisá los menús disponibles dentro del campus.</p></article>
+        <article class="step-card"><b>02</b><h3>Armá tu pedido</h3><p>Seleccioná tus productos y envialos a preparación.</p></article>
+        <article class="step-card"><b>03</b><h3>Pasá a retirarlo</h3><p>Recogé tu comida lista y aprovechá mejor el receso.</p></article>
+      </div>
+    </section>
+
+    <section class="about-section landing-only" id="acerca">
+      <div>
+        <span class="section-kicker">Acerca de nosotros</span>
+        <h2>Comida lista al ritmo de la universidad.</h2>
+      </div>
+      <p>Cash Food conecta estudiantes y quioscos para hacer los recesos más ágiles. Nuestro objetivo es reducir filas, ordenar los pedidos y darles más tiempo a quienes viven el campus todos los días.</p>
+    </section>
+
+    <section class="marketplace" id="marketplace" hidden>
+      <header class="market-topbar">
+        <div><span class="market-eyebrow">Cash Food · Campus</span><h2>Hola, <span id="market-user-name"></span></h2></div>
+        <div class="market-actions">
+          <label class="market-search"><span aria-hidden="true">⌕</span><input id="product-search" type="search" placeholder="Buscar comida..." /></label>
+          <button class="market-cart-link" type="button" data-scroll-cart>Mi pedido <b id="cart-count">0</b></button>
+          <button class="market-logout" type="button" data-logout>Salir</button>
+        </div>
+      </header>
+      <section class="market-welcome" id="market-welcome">
+        <div><span>Pedí ahora, retiralo después</span><h1>¿Qué se te antoja hoy?</h1><p>Elegí un lugar del campus y armá tu pedido sin hacer fila.</p></div>
+        <div class="market-sticker">listo<br />en un<br /><strong>rato</strong></div>
+      </section>
+      <button class="back-to-kiosks" id="back-to-kiosks" type="button" hidden>← Volver a quioscos</button>
+      <div class="market-layout">
+        <div class="market-content">
+          <section class="market-section" id="kiosk-panel">
+            <div class="market-section-heading"><div><span>Explorá</span><h2>Quioscos del campus</h2></div><small>Elegí uno para ver su menú</small></div>
+            <div class="kiosk-grid" id="kiosk-list"></div>
+          </section>
+          <section class="market-section products-section" id="products-panel">
+            <div class="market-section-heading"><div><span>Menú</span><h2 id="selected-kiosk-name">Elegí un quiosco</h2></div></div>
+            <div class="product-grid" id="product-list"></div>
+          </section>
+        </div>
+        <aside class="market-cart" id="cart-panel">
+          <div class="cart-heading"><div><span>Tu pedido</span><h2>Carrito</h2></div><b id="cart-side-count">0</b></div>
+          <div id="cart-list"></div>
+          <div class="cart-summary"><span>Total</span><strong>$<span id="cart-total">0.00</span></strong></div>
+          <button id="place-order-button">Enviar pedido <span>→</span></button>
+          <small>Retirá en el quiosco cuando esté listo.</small>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel user-panel fade-in" id="user-panel" hidden>
+      <div class="user-header">
+        <div><h2>Bienvenido, <span id="user-name"></span></h2><p>Eres <strong id="user-role"></strong>.</p></div>
+        <button id="logout-button">Cerrar sesión</button>
+      </div>
+    </section>
+    <section class="admin-dashboard" id="admin-panel" hidden>
+      <header class="admin-topbar">
+        <div><span>Panel del negocio</span><h2>Hola, administrador</h2><p>Gestioná tu perfil, menú y pedidos.</p></div>
+        <button type="button" data-admin-logout>Salir</button>
+      </header>
+      <section class="admin-profile-card">
+        <div class="admin-cover" id="admin-cover"><span id="admin-cover-letter">C</span></div>
+        <form id="kiosk-profile-form" class="admin-profile-form">
+          <div class="admin-section-title"><div><span>Mini perfil</span><h2>Tu quiosco o cafetería</h2></div><button type="submit">Guardar perfil</button></div>
+          <div class="admin-form-grid">
+            <label><span>Nombre del negocio</span><input id="admin-kiosk-name" required /></label>
+            <label><span>Ubicación</span><input id="admin-kiosk-location" required /></label>
+            <label><span>Horario</span><input id="admin-kiosk-schedule" placeholder="Lun a Vie · 7:00 AM - 5:00 PM" /></label>
+            <label><span>Foto de portada</span><input id="admin-kiosk-image" type="file" accept="image/*" /></label>
+            <label class="admin-wide"><span>Descripción</span><textarea id="admin-kiosk-description" rows="3" required></textarea></label>
+          </div>
+        </form>
+      </section>
+      <div class="admin-columns">
+        <section class="admin-workspace">
+          <div class="admin-section-title"><div><span>Catálogo</span><h2>Publicar producto</h2></div></div>
+          <form id="product-form" class="product-form">
+            <input id="editing-product-id" type="hidden" />
+            <label><span>Nombre</span><input id="admin-product-name" required /></label>
+            <label><span>Precio</span><input id="admin-product-price" type="number" min="0.01" step="0.01" required /></label>
+            <label><span>Categoría</span><select id="admin-product-category"><option>Comida</option><option>Bebida</option><option>Snack</option><option>Postre</option><option>Otro</option></select></label>
+            <label><span>Foto</span><input id="admin-product-image" type="file" accept="image/*" /></label>
+            <label class="admin-wide"><span>Descripción</span><textarea id="admin-product-description" rows="2"></textarea></label>
+            <label class="availability-check"><input id="admin-product-available" type="checkbox" checked /><span>Disponible para clientes</span></label>
+            <div class="product-form-actions"><button type="button" id="cancel-product-edit" hidden>Cancelar</button><button type="submit" id="save-product-button">Publicar producto</button></div>
+          </form>
+          <div class="admin-section-title admin-list-title"><div><span>Menú actual</span><h2>Tus productos</h2></div><b id="admin-product-count">0</b></div>
+          <div class="admin-product-list" id="admin-product-list"></div>
+        </section>
+        <aside class="admin-preview">
+          <div class="admin-section-title"><div><span>Así te ven</span><h2>Vista del cliente</h2></div></div>
+          <article class="preview-kiosk-card">
+            <div class="preview-kiosk-cover" id="preview-kiosk-cover"><span id="preview-kiosk-letter">C</span></div>
+            <div class="preview-kiosk-info"><small id="preview-kiosk-schedule"></small><h3 id="preview-kiosk-name">Tu quiosco</h3><p id="preview-kiosk-description"></p><span id="preview-kiosk-location"></span></div>
+          </article>
+          <div class="preview-products-heading"><span>Productos publicados</span><b id="preview-product-count">0</b></div>
+          <div class="preview-product-list" id="preview-product-list"></div>
+        </aside>
+      </div>
+      <div class="admin-toast" id="admin-toast" role="status" aria-live="polite" hidden></div>
+    </section>
+  </main>
+  <footer><p>Prototipo sin base de datos. Los datos se pierden al reiniciar el servidor.</p></footer>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
