@@ -10,6 +10,8 @@ const cart = [];
 
 const $ = id => document.getElementById(id);
 const authPanel = $('auth-panel');
+const authCard = document.querySelector('.auth-card');
+const authTabs = document.querySelector('.auth-tabs');
 const siteHeader = $('site-header');
 const marketplace = $('marketplace');
 const userPanel = $('user-panel');
@@ -69,10 +71,15 @@ function updateSelectedRole(radios) {
 }
 
 function showAuthView(viewName) {
+  const showingRegister = viewName === 'register';
+  authTabs.classList.toggle('register-active', showingRegister);
+  authCard.classList.toggle('show-register', showingRegister);
+
   document.querySelectorAll('.auth-tab').forEach(tab => {
     const active = tab.dataset.authView === viewName;
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', String(active));
+    tab.setAttribute('tabindex', active ? '0' : '-1');
   });
   document.querySelectorAll('.auth-view').forEach(view => {
     const active = view.id === `${viewName}-view`;

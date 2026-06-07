@@ -22,6 +22,13 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada. Reinicia el servidor si acabas de actualizar el proyecto.' });
 });
 
+app.use((error, req, res, next) => {
+  console.error(error);
+  if (error.code === '23505') return res.status(400).json({ error: 'Ese dato ya está registrado.' });
+  if (error.code === '23503') return res.status(400).json({ error: 'La referencia solicitada no existe.' });
+  res.status(500).json({ error: 'Ocurrió un error en el servidor.' });
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(publicDirectory, 'index.html'));
 });

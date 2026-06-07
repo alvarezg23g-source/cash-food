@@ -13,6 +13,27 @@ Aplicación web de preórdenes para quioscos y cafeterías universitarias.
 - Disponibilidad de productos reflejada en el marketplace de clientes
 - Un perfil de negocio único por cada correo administrador
 
+## Base de datos
+
+Cash Food utiliza PostgreSQL. Crea un archivo `.env` a partir de `.env.example` y configura la contraseña local:
+
+```env
+DATABASE_URL=postgresql://postgres:TU_PASSWORD@localhost:5432/cash_food
+PORT=3000
+```
+
+Después crea automáticamente la base de datos y sus tablas:
+
+```bash
+npm run db:configure
+```
+
+Este comando solicita la contraseña local de PostgreSQL y configura `.env`. Para volver a ejecutar únicamente el esquema:
+
+```bash
+npm run db:init
+```
+
 ## Ejecutar el proyecto
 
 ```bash
@@ -46,7 +67,8 @@ public/
 src/
   app.js                     Configuración de Express
   server.js                  Arranque del servidor
-  data/store.js              Datos temporales en memoria
+  db/pool.js                 Conexión PostgreSQL
+  db/schema.sql              Esquema de tablas
   routes/
     auth.routes.js           Registro e inicio de sesión
     catalog.routes.js        Quioscos y productos
@@ -55,4 +77,4 @@ src/
 
 ## Notas
 
-Los datos y las fotos se guardan en memoria y se pierden al reiniciar el servidor. Para producción se debe agregar una base de datos, almacenamiento de imágenes y contraseñas seguras.
+Los usuarios, negocios, productos y pedidos se guardan en PostgreSQL. Las imágenes se almacenan temporalmente como texto en la base de datos; para producción conviene migrarlas a almacenamiento de archivos.
