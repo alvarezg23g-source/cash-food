@@ -4,6 +4,7 @@ const pool = require('../db/pool');
 
 const router = express.Router();
 
+// Registro: crea al usuario y, si es admin, tambien su unico quiosco.
 router.post('/register', async (req, res, next) => {
   const { name, email, password, role } = req.body;
   if (!name || !email || !password) {
@@ -50,6 +51,7 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
+// Login devuelve solo datos publicos; el hash se queda donde debe quedarse.
 router.post('/login', async (req, res, next) => {
   try {
     const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
@@ -62,8 +64,10 @@ router.post('/login', async (req, res, next) => {
     );
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(req.body.password || '', user.password_hash))) {
+      console.warn(`Inicio de sesión rechazado para: ${normalizedEmail || '(correo vacío)'}`);
       return res.status(401).json({ error: 'Credenciales incorrectas.' });
     }
+    console.log(`Inicio de sesión correcto: ${user.email} (${user.role})`);
     return res.json({ message: 'Inicio de sesión exitoso', user: publicUser(user, user.kiosk_id) });
   } catch (error) {
     return next(error);

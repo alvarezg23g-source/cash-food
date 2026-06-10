@@ -1,5 +1,9 @@
 # Cash Food
 
+Guia de inicio, PostgreSQL y consultas: [GUIA_COMANDOS.md](GUIA_COMANDOS.md)
+
+Explicacion completa de carpetas, archivos y flujo del codigo: [ESTRUCTURA_PROYECTO.md](ESTRUCTURA_PROYECTO.md)
+
 Aplicación web de preórdenes para quioscos y cafeterías universitarias.
 
 ## Funciones

@@ -1,3 +1,4 @@
+-- Estructura persistente de Cash Food. Aqui los pedidos sobreviven al boton cerrar.
 CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
@@ -39,8 +40,13 @@ CREATE TABLE IF NOT EXISTS orders (
   kiosk_id BIGINT NOT NULL REFERENCES kiosks(id),
   status VARCHAR(30) NOT NULL DEFAULT 'pendiente',
   total NUMERIC(10, 2) NOT NULL CHECK (total > 0),
+  hidden_by_client BOOLEAN NOT NULL DEFAULT FALSE,
+  hidden_by_kiosk BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS hidden_by_client BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS hidden_by_kiosk BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS order_items (
   id BIGSERIAL PRIMARY KEY,

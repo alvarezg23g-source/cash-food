@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 
+// Una sola piscina de conexiones. Abrir una por consulta seria cardio innecesario.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });

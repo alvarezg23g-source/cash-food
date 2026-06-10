@@ -1,11 +1,21 @@
-const apiBase = '/api';
+// Controla la interfaz completa: autenticacion, marketplace, pedidos y panel admin.
+import { apiBase, post, request } from './core/api.js';
+import { escapeHtml, formatOrderDate, imageFileToDataUrl, orderCode, statusLabel } from './core/format.js';
+import { downloadReceipt, initReceiptActions, printInvoice, showReceipt } from './receipts.js';
+
 let currentUser = null;
 let selectedKioskId = null;
 let kiosksData = [];
 let currentProducts = [];
 let adminProducts = [];
+let clientOrders = [];
+let adminOrders = [];
 let kioskCoverImage = '';
 let productDraftImage = '';
+let orderRefreshTimer = null;
+let orderEventSource = null;
+let clientOrderStatuses = new Map();
+let clientOrdersLoaded = false;
 const cart = [];
 
 const $ = id => document.getElementById(id);
@@ -24,6 +34,9 @@ const productList = $('product-list');
 const cartList = $('cart-list');
 const cartTotal = $('cart-total');
 const adminProductList = $('admin-product-list');
+const clientOrderList = $('client-order-list');
+const adminOrderList = $('admin-order-list');
+const clientNoticeStack = $('client-notice-stack');
 const registerForm = $('register-form');
 const loginForm = $('login-form');
 const productSearch = $('product-search');
@@ -36,6 +49,7 @@ const marketCartLink = document.querySelector('.market-cart-link');
 const registerRoleRadios = document.querySelectorAll('input[name="register-role"]');
 const adminRegisterNote = document.querySelector('.admin-register-note');
 
+// Eventos de la interfaz. Mejor reunirlos aqui que jugar a encontrarlos por todo el archivo.
 registerRoleRadios.forEach(radio => radio.addEventListener('change', handleRoleChange));
 document.querySelectorAll('.auth-tab').forEach(tab => tab.addEventListener('click', () => showAuthView(tab.dataset.authView)));
 document.querySelectorAll('[data-open-auth]').forEach(link => link.addEventListener('click', () => showAuthView(link.dataset.openAuth)));
@@ -50,6 +64,7 @@ document.querySelector('[data-admin-logout]').addEventListener('click', logout);
 $('kiosk-profile-form').addEventListener('submit', saveKioskProfile);
 $('product-form').addEventListener('submit', saveProduct);
 $('cancel-product-edit').addEventListener('click', resetProductForm);
+initReceiptActions();
 $('admin-kiosk-image').addEventListener('change', async event => {
   kioskCoverImage = await imageFileToDataUrl(event.target.files[0]);
   renderAdminCover();
@@ -60,6 +75,7 @@ $('admin-product-image').addEventListener('change', async event => {
 ['admin-kiosk-name', 'admin-kiosk-location', 'admin-kiosk-schedule', 'admin-kiosk-description']
   .forEach(id => $(id).addEventListener('input', renderClientPreview));
 
+// Autenticacion y sesion.
 function handleRoleChange() {
   const role = document.querySelector('input[name="register-role"]:checked').value;
   adminRegisterNote.hidden = role !== 'admin';
@@ -116,17 +132,36 @@ registerForm.addEventListener('submit', async event => {
 
 loginForm.addEventListener('submit', async event => {
   event.preventDefault();
-  const response = await post('/login', {
-    email: $('login-email').value.trim(),
-    password: $('login-password').value.trim()
-  });
-  if (!response.ok) return alert(response.data.error || 'No se pudo iniciar sesión.');
-  currentUser = response.data.user;
-  loginForm.reset();
-  showApp();
+  const button = event.submitter || loginForm.querySelector('button[type="submit"]');
+  const email = $('login-email').value.trim().toLowerCase();
+  setButtonState(button, true, 'Comprobando...');
+  showAuthMessage('');
+  try {
+    const response = await post('/login', {
+      email,
+      password: $('login-password').value.trim()
+    });
+    if (!response.ok) {
+      return showAuthMessage(`No pudimos ingresar. Revisá el correo ${email} y la contraseña.`);
+    }
+    currentUser = response.data.user;
+    loginForm.reset();
+    showApp();
+  } catch (error) {
+    console.error('Error durante el inicio de sesión:', error);
+    showAuthMessage(error.message);
+  } finally {
+    setButtonState(button, false, 'Entrar a Cash Food');
+  }
 });
 
 function logout() {
+  clearInterval(orderRefreshTimer);
+  orderRefreshTimer = null;
+  disconnectOrderEvents();
+  clientOrderStatuses.clear();
+  clientOrdersLoaded = false;
+  clientNoticeStack?.replaceChildren();
   currentUser = null;
   selectedKioskId = null;
   currentProducts = [];
@@ -135,6 +170,7 @@ function logout() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Marketplace del cliente.
 async function loadKiosks() {
   const response = await fetch(`${apiBase}/kioscos`);
   kiosksData = await response.json();
@@ -256,11 +292,15 @@ async function placeOrder() {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const response = await post('/pedidos', { userId: currentUser.id, items: cart, total, kioskId: selectedKioskId });
   if (!response.ok) return alert(response.data.error || 'No se pudo enviar el pedido.');
-  alert('Pedido enviado. Te avisaremos cuando esté listo.');
   cart.length = 0;
   renderCart();
+  await loadClientOrders();
+  showClientOrderNotice(response.data.order);
+  document.querySelector('.client-order-center').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  alert(`Pedido #${response.data.order.id} enviado. Tu factura ya está disponible.`);
 }
 
+// Panel del administrador.
 async function loadAdminWorkspace() {
   const [kioskResponse, productsResponse] = await Promise.all([
     fetch(`${apiBase}/admin/kioscos/${currentUser.kioskId}`),
@@ -276,8 +316,207 @@ async function loadAdminWorkspace() {
   renderAdminCover();
   renderAdminProducts();
   renderClientPreview();
+  loadAdminOrders();
 }
 
+async function loadClientOrders() {
+  if (!currentUser || currentUser.role !== 'cliente') return;
+  const response = await fetch(`${apiBase}/pedidos?userId=${currentUser.id}`);
+  if (!response.ok) return;
+  const orders = await response.json();
+  notifyClientOrderChanges(orders);
+  clientOrders = orders;
+  renderOrders(clientOrderList, clientOrders, false);
+  $('client-order-count').textContent = clientOrders.length;
+}
+
+// Pedidos, facturas y avisos en tiempo real.
+function notifyClientOrderChanges(orders) {
+  if (clientOrdersLoaded) {
+    orders.forEach(order => {
+      const previousStatus = clientOrderStatuses.get(order.id);
+      if (previousStatus && previousStatus !== order.status) showClientOrderNotice(order);
+    });
+  }
+  clientOrderStatuses = new Map(orders.map(order => [order.id, order.status]));
+  clientOrdersLoaded = true;
+}
+
+function showClientOrderNotice(order) {
+  const messages = {
+    pendiente: { eyebrow: 'Pedido recibido', title: 'El quiosco recibió tu pedido', detail: 'En breve comenzarán a prepararlo.' },
+    'en-preparacion': { eyebrow: 'En preparación', title: 'Están preparando tu comida', detail: 'Tu pedido ya está en marcha.' },
+    listo: { eyebrow: '¡Pedido listo!', title: 'Vení por tu comida', detail: `Mostrá el código ${orderCode(order.id)} al retirarlo.` },
+    entregado: { eyebrow: 'Pedido entregado', title: '¡Que lo disfrutés!', detail: 'Tu comprobante quedará disponible en el historial.' }
+  };
+  const message = messages[order.status];
+  if (!message || !clientNoticeStack) return;
+  const notice = document.createElement('article');
+  notice.className = `client-order-notice notice-${order.status}`;
+  notice.innerHTML = `
+    <div class="notice-motion"><span></span><i></i><b></b></div>
+    <div><small>${message.eyebrow} · ${escapeHtml(order.kioskName)}</small><strong>${message.title}</strong><p>${message.detail}</p></div>
+    <button type="button" aria-label="Cerrar aviso">×</button>`;
+  notice.querySelector('button').addEventListener('click', () => removeClientNotice(notice));
+  clientNoticeStack.appendChild(notice);
+  requestAnimationFrame(() => notice.classList.add('visible'));
+  setTimeout(() => removeClientNotice(notice), order.status === 'listo' ? 10000 : 7000);
+}
+
+function removeClientNotice(notice) {
+  notice.classList.remove('visible');
+  setTimeout(() => notice.remove(), 350);
+}
+
+async function loadAdminOrders() {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  const response = await fetch(`${apiBase}/admin/pedidos?kioskId=${currentUser.kioskId}`);
+  if (!response.ok) return;
+  adminOrders = await response.json();
+  renderOrders(adminOrderList, adminOrders, true);
+  $('admin-order-count').textContent = adminOrders.length;
+}
+
+function connectOrderEvents() {
+  disconnectOrderEvents();
+  if (!currentUser || typeof EventSource === 'undefined') return;
+
+  orderEventSource = new EventSource(`${apiBase}/pedidos/eventos`);
+  orderEventSource.addEventListener('order', event => {
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+
+    const order = payload.order;
+    const isClientEvent = currentUser?.role === 'cliente'
+      && (order?.userId === currentUser.id || payload.userId === currentUser.id);
+    const isAdminEvent = currentUser?.role === 'admin'
+      && (order?.kioskId === currentUser.kioskId || payload.kioskId === currentUser.kioskId);
+
+    if (isClientEvent) loadClientOrders();
+    if (isAdminEvent) {
+      loadAdminOrders();
+      if (payload.type === 'created') {
+        showAdminToast(`Nuevo pedido ${orderCode(order.id)} recibido.`);
+      }
+    }
+  });
+}
+
+function disconnectOrderEvents() {
+  orderEventSource?.close();
+  orderEventSource = null;
+}
+
+function renderOrders(container, orders, adminView) {
+  container.innerHTML = '';
+  if (!orders.length) {
+    return renderEmpty(
+      container,
+      adminView ? 'Todavía no recibiste pedidos' : 'Todavía no hiciste pedidos',
+      adminView ? 'Los pedidos enviados por clientes aparecerán aquí.' : 'Cuando envíes un pedido, su factura aparecerá aquí.'
+    );
+  }
+  if (!adminView) {
+    orders.forEach(order => container.appendChild(createPickupCard(order)));
+    return;
+  }
+  orders.forEach(order => container.appendChild(createInvoiceCard(order, adminView)));
+}
+
+function createPickupCard(order) {
+  const card = document.createElement('article');
+  card.className = 'pickup-card';
+  card.innerHTML = `
+    <div class="pickup-card-top">
+      <div><span>Pedido para retirar en</span><h3>${escapeHtml(order.kioskName)}</h3></div>
+      <b class="invoice-status status-${order.status}">${statusLabel(order.status)}</b>
+    </div>
+    <div class="pickup-code"><span>Código de pedido</span><strong>${orderCode(order.id)}</strong></div>
+    <div class="pickup-summary"><span>${order.items.reduce((sum, item) => sum + item.quantity, 0)} productos<br>${formatOrderDate(order.createdAt)}</span><strong>$${order.total.toFixed(2)}</strong></div>
+    <div class="pickup-actions"><button type="button" data-view-pickup>Mostrar comprobante</button><button type="button" data-delete-order>Eliminar</button></div>`;
+  card.querySelector('[data-view-pickup]').addEventListener('click', () => showReceipt(order));
+  card.querySelector('[data-delete-order]').addEventListener('click', () => deleteOrder(order.id, false));
+  return card;
+}
+
+function createInvoiceCard(order, adminView) {
+  const card = document.createElement('article');
+  card.className = `invoice-card status-card-${order.status}`;
+  const items = order.items.map(item => `
+    <div class="invoice-item">
+      <b>${item.quantity}×</b>
+      <span>${escapeHtml(item.name)}<small>$${item.price.toFixed(2)} c/u</small></span>
+      <strong>$${(item.price * item.quantity).toFixed(2)}</strong>
+    </div>`).join('');
+  const statusControl = adminView ? `
+    <select aria-label="Estado del pedido ${order.id}" data-order-status>
+      ${['pendiente', 'en-preparacion', 'listo', 'entregado'].map(status =>
+        `<option value="${status}" ${status === order.status ? 'selected' : ''}>${statusLabel(status)}</option>`
+      ).join('')}
+    </select>` : '';
+  card.innerHTML = `
+    <div class="invoice-card-head">
+      <div><span>Factura Cash Food</span><h3>${orderCode(order.id)}</h3><small>${formatOrderDate(order.createdAt)}</small></div>
+      <b class="invoice-status status-${order.status}">${statusLabel(order.status)}</b>
+    </div>
+    <div class="admin-invoice-customer">
+      <span class="admin-invoice-avatar">${escapeHtml(order.userName).charAt(0)}</span>
+      <div><small>Pedido de</small><strong>${escapeHtml(order.userName)}</strong><span>${escapeHtml(order.userEmail)}</span></div>
+      <b>${order.items.reduce((sum, item) => sum + item.quantity, 0)} uds.</b>
+    </div>
+    <div class="invoice-meta">
+      <div><span>Retiro</span><b>${escapeHtml(order.kioskLocation)}</b></div>
+      <div><span>Estado actual</span><b>${statusLabel(order.status)}</b></div>
+    </div>
+    <div class="invoice-items">${items}</div>
+    <div class="invoice-total"><span>Total del pedido</span><strong>$${order.total.toFixed(2)}</strong></div>
+    <div class="invoice-status-control"><label><span>Cambiar estado</span>${statusControl}</label></div>
+    <div class="invoice-actions">
+      <button type="button" data-view-invoice>Ver comprobante</button>
+      <button type="button" data-download-invoice>Descargar</button>
+      <button type="button" data-print-invoice>Imprimir</button>
+      <button type="button" data-delete-order>Eliminar</button>
+    </div>`;
+  card.querySelector('[data-view-invoice]').addEventListener('click', () => showReceipt(order, true));
+  card.querySelector('[data-download-invoice]').addEventListener('click', () => downloadReceipt(order, true));
+  card.querySelector('[data-print-invoice]').addEventListener('click', () => printInvoice(order));
+  card.querySelector('[data-delete-order]').addEventListener('click', () => deleteOrder(order.id, true));
+  card.querySelector('[data-order-status]')?.addEventListener('change', event => updateOrderStatus(order.id, event.target.value));
+  return card;
+}
+
+async function updateOrderStatus(orderId, status) {
+  const response = await post(`/admin/pedidos/${orderId}/status`, { status, kioskId: currentUser.kioskId });
+  if (!response.ok) return showAdminToast(response.data.error || 'No se pudo actualizar el pedido.', 'error');
+  await loadAdminOrders();
+  showAdminToast(`Pedido #${orderId} actualizado a ${statusLabel(status)}.`);
+}
+
+async function deleteOrder(orderId, adminView) {
+  const code = orderCode(orderId);
+  const orders = adminView ? adminOrders : clientOrders;
+  const order = orders.find(item => item.id === orderId);
+  if (order?.status !== 'entregado') {
+    const message = 'Solo podés eliminar la factura cuando el pedido esté entregado.';
+    return adminView ? showAdminToast(message, 'error') : alert(message);
+  }
+  if (!confirm(`¿Eliminar la factura ${code} de tu historial? La otra persona conservará su comprobante.`)) return;
+  const response = await post(`/pedidos/${orderId}/ocultar`, adminView
+    ? { kioskId: currentUser.kioskId }
+    : { userId: currentUser.id });
+  if (!response.ok) {
+    const message = response.data.error || 'No se pudo eliminar la factura.';
+    return adminView ? showAdminToast(message, 'error') : alert(message);
+  }
+  adminView ? await loadAdminOrders() : await loadClientOrders();
+  if (adminView) showAdminToast(`Factura ${code} eliminada de tu historial.`);
+}
+
+// Perfil y catalogo del administrador.
 function renderAdminCover() {
   const cover = $('admin-cover');
   cover.style.backgroundImage = kioskCoverImage ? `url('${kioskCoverImage}')` : '';
@@ -394,20 +633,6 @@ function resetProductForm() {
   productDraftImage = '';
 }
 
-function imageFileToDataUrl(file) {
-  if (!file) return Promise.resolve('');
-  if (file.size > 3 * 1024 * 1024) {
-    alert('La imagen debe pesar menos de 3 MB.');
-    return Promise.resolve('');
-  }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function renderClientPreview() {
   const cover = $('preview-kiosk-cover');
   cover.style.backgroundImage = kioskCoverImage ? `url('${kioskCoverImage}')` : '';
@@ -430,7 +655,9 @@ function renderClientPreview() {
   });
 }
 
+// Ayudantes compartidos. Pequenos, aburridos y bastante utiles.
 function setButtonState(button, loading, text) {
+  if (!button) return;
   button.disabled = loading;
   button.textContent = text;
 }
@@ -442,6 +669,13 @@ function showAdminToast(message, type = 'success') {
   toast.hidden = false;
   clearTimeout(showAdminToast.timeout);
   showAdminToast.timeout = setTimeout(() => { toast.hidden = true; }, 3500);
+}
+
+function showAuthMessage(message) {
+  const element = $('auth-message');
+  element.textContent = message;
+  element.classList.remove('success');
+  element.hidden = !message;
 }
 
 function renderEmpty(container, title, detail, className = 'market-empty') {
@@ -460,42 +694,31 @@ function showApp() {
   marketplace.hidden = !client;
   userPanel.hidden = true;
   adminPanel.hidden = !admin;
+  clearInterval(orderRefreshTimer);
+  orderRefreshTimer = null;
+  disconnectOrderEvents();
 
   if (client) {
+    clientOrderStatuses.clear();
+    clientOrdersLoaded = false;
+    clientNoticeStack?.replaceChildren();
     $('market-user-name').textContent = currentUser.name.split(' ')[0];
     selectedKioskName.textContent = 'Elegí un quiosco';
     loadKiosks();
     renderCart();
     renderProductCards([]);
     showKioskDirectory();
+    loadClientOrders();
+    connectOrderEvents();
+    orderRefreshTimer = setInterval(loadClientOrders, 30000);
   }
   if (admin) {
     $('user-name').textContent = currentUser.name;
     $('user-role').textContent = 'Administrador del quiosco';
     loadAdminWorkspace();
+    connectOrderEvents();
+    orderRefreshTimer = setInterval(loadAdminOrders, 30000);
   }
-}
-
-async function post(path, body) {
-  return request(path, 'POST', body);
-}
-
-async function request(path, method, body) {
-  let response;
-  try {
-    response = await fetch(`${apiBase}${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined
-    });
-  } catch {
-    throw new Error('No se pudo conectar con el servidor.');
-  }
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    throw new Error('El servidor está desactualizado. Reinícialo y vuelve a intentar.');
-  }
-  return { ok: response.ok, data: await response.json() };
 }
 
 loadKiosks().then(() => {

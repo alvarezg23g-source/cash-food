@@ -3,6 +3,7 @@ const pool = require('../db/pool');
 
 const router = express.Router();
 
+// Catalogo publico: solo negocios publicados y productos disponibles.
 router.get('/kioscos', async (req, res, next) => {
   try {
     const result = await pool.query(

@@ -3,6 +3,7 @@ const pool = require('../db/pool');
 
 const router = express.Router();
 
+// Herramientas del administrador para cuidar su perfil y catalogo.
 router.get('/admin/kioscos/:kioskId', async (req, res, next) => {
   try {
     const kiosk = await getKiosk(req.params.kioskId);
@@ -98,9 +99,27 @@ async function getKiosk(id) {
 }
 
 function productPayload(body) {
-  return { name: String(body.name || '').trim(), price: Number(body.price), category: String(body.category || 'Comida'), description: String(body.description || '').trim(), image: String(body.image || ''), available: body.available !== false };
+  return {
+    name: String(body.name || '').trim(),
+    price: Number(body.price),
+    category: String(body.category || 'Comida'),
+    description: String(body.description || '').trim(),
+    image: String(body.image || ''),
+    available: body.available !== false
+  };
 }
-function mapKiosk(row) { return { ...row, id: Number(row.id) }; }
-function mapProduct(row) { return { ...row, id: Number(row.id), kioskId: Number(row.kioskId), price: Number(row.price) }; }
+
+function mapKiosk(row) {
+  return { ...row, id: Number(row.id) };
+}
+
+function mapProduct(row) {
+  return {
+    ...row,
+    id: Number(row.id),
+    kioskId: Number(row.kioskId),
+    price: Number(row.price)
+  };
+}
 
 module.exports = router;

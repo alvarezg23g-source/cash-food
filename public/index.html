@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+<!-- Estructura de la interfaz. La logica vive en main.js, como persona civilizada. -->
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cash Food - Preórdenes para Quioscos</title>
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20260609-14" />
 </head>
 <body>
   <header class="hero" id="site-header">
@@ -164,7 +165,21 @@
           <small>Retirá en el quiosco cuando esté listo.</small>
         </aside>
       </div>
+      <section class="order-center client-order-center">
+        <div class="order-center-heading"><div><span>Comprobantes para retirar</span><h2>Mis pedidos</h2></div><b id="client-order-count">0</b></div>
+        <p class="client-orders-note">Mostrá el código y la factura en el quiosco cuando retires tu pedido.</p>
+        <div class="pickup-grid" id="client-order-list"></div>
+      </section>
+      <div class="client-notice-stack" id="client-notice-stack" aria-live="polite"></div>
     </section>
+
+    <dialog class="receipt-dialog" id="receipt-dialog">
+      <div class="receipt-dialog-toolbar">
+        <button type="button" data-close-receipt>Cerrar</button>
+        <div><button type="button" data-download-receipt>Descargar</button><button type="button" data-print-receipt>Guardar PDF / imprimir</button></div>
+      </div>
+      <article class="customer-receipt" id="customer-receipt"></article>
+    </dialog>
 
     <section class="panel user-panel fade-in" id="user-panel" hidden>
       <div class="user-header">
@@ -189,6 +204,10 @@
             <label class="admin-wide"><span>Descripción</span><textarea id="admin-kiosk-description" rows="3" required></textarea></label>
           </div>
         </form>
+      </section>
+      <section class="order-center admin-order-center">
+        <div class="order-center-heading"><div><span>Pedidos recibidos</span><h2>Facturas del quiosco</h2><p>Revisá el código, prepará el pedido y entregá el comprobante.</p></div><b id="admin-order-count">0</b></div>
+        <div class="invoice-grid" id="admin-order-list"></div>
       </section>
       <div class="admin-columns">
         <section class="admin-workspace">
@@ -220,6 +239,6 @@
     </section>
   </main>
   <footer><p>Prototipo sin base de datos. Los datos se pierden al reiniciar el servidor.</p></footer>
-  <script src="assets/js/main.js"></script>
+  <script type="module" src="assets/js/main.js?v=20260609-15"></script>
 </body>
 </html>

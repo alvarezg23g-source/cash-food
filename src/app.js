@@ -9,6 +9,7 @@ const adminRoutes = require('./routes/admin.routes');
 const app = express();
 const publicDirectory = path.join(__dirname, '..', 'public');
 
+// Middleware comun: JSON, archivos publicos y CORS para que todo converse.
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(publicDirectory));
@@ -18,6 +19,7 @@ app.use('/api', catalogRoutes);
 app.use('/api', ordersRoutes);
 app.use('/api', adminRoutes);
 
+// Ultima parada de la API. Evita responder HTML cuando alguien inventa una ruta.
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada. Reinicia el servidor si acabas de actualizar el proyecto.' });
 });
@@ -29,6 +31,7 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'Ocurrió un error en el servidor.' });
 });
 
+// La interfaz vive en una sola pagina; Express entrega index.html como respaldo.
 app.get('*', (req, res) => {
   res.sendFile(path.join(publicDirectory, 'index.html'));
 });
