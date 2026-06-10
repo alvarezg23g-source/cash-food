@@ -37,11 +37,14 @@ cash-food/
 │       ├── images/
 │       │   └── cash-food-logo.png  Logo de Cash Food
 │       └── js/
-│           ├── main.js             Flujo principal de la interfaz
+│           ├── main.js             Sesión, pedidos y coordinación general
+│           ├── marketplace.js      Quioscos, productos y carrito del cliente
+│           ├── admin.js            Perfil y catálogo del administrador
 │           ├── receipts.js         Comprobantes, descargas e impresión
 │           └── core/
 │               ├── api.js          Comunicación con el servidor
-│               └── format.js       Formatos y funciones reutilizables
+│               ├── format.js       Formatos y funciones reutilizables
+│               └── ui.js           Ayudantes visuales compartidos
 ├── scripts/
 │   ├── configure-db.ps1            Configura PostgreSQL en Windows
 │   └── init-db.js                  Ejecuta el esquema de la base de datos
@@ -119,14 +122,20 @@ Es el controlador principal del frontend. Se encarga de coordinar:
 
 - Registro e inicio de sesión.
 - Cambio entre vista pública, cliente y administrador.
-- Carga de quioscos y productos.
-- Carrito del cliente.
-- Creación de pedidos.
-- Listado y actualización de pedidos.
-- Formularios del perfil y catálogo del administrador.
+- Coordinación entre las vistas del cliente y administrador.
+- Creación, listado y actualización de pedidos.
+- Conexión con marketplace y administración.
 - Conexión con los avisos en tiempo real.
 
-No contiene toda la lógica auxiliar. Importa responsabilidades más específicas desde los módulos `core` y `receipts.js`.
+No contiene toda la lógica auxiliar. Importa responsabilidades más específicas desde `marketplace.js`, `admin.js`, los módulos `core` y `receipts.js`.
+
+### `public/assets/js/marketplace.js`
+
+Controla el catálogo visible para clientes, la selección de quioscos, búsqueda de productos, carrito y envío del pedido.
+
+### `public/assets/js/admin.js`
+
+Controla el perfil del negocio, publicación y edición de productos, vista previa y mensajes del administrador.
 
 ### `public/assets/js/core/api.js`
 
